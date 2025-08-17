@@ -6,7 +6,9 @@ PeerLearn is a modern web application designed to facilitate peer-to-peer learni
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+- Preferred communication style: Simple, everyday language
+- App defaults to dark mode theme
+- Navigation layout: Left sidebar with Home, Q&A section, and Chat section prominently positioned
 
 ## System Architecture
 

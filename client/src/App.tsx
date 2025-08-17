@@ -19,18 +19,22 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navigation />
-      <Switch>
-        <Route path="/auth" component={AuthPage} />
-        <Route path="/" component={Dashboard} />
-        <Route path="/matches" component={MatchesPage} />
-        <Route path="/chat" component={ChatPage} />
-        <Route path="/forum" component={ForumPage} />
-        <Route path="/groups" component={StudyGroupsPage} />
-        <Route path="/leaderboard" component={LeaderboardPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <div className="md:pl-64">
+        <main className="pb-16 md:pb-0">
+          <Switch>
+            <Route path="/auth" component={AuthPage} />
+            <Route path="/" component={Dashboard} />
+            <Route path="/matches" component={MatchesPage} />
+            <Route path="/chat" component={ChatPage} />
+            <Route path="/forum" component={ForumPage} />
+            <Route path="/groups" component={StudyGroupsPage} />
+            <Route path="/leaderboard" component={LeaderboardPage} />
+            <Route component={NotFound} />
+          </Switch>
+        </main>
+      </div>
     </div>
   );
 }
@@ -38,7 +42,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="peerlearn-ui-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="peerlearn-ui-theme">
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
