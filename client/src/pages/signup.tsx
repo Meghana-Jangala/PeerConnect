@@ -37,9 +37,10 @@ function Signup() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-6">
-        <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="w-full max-w-md bg-card text-card-foreground shadow-xl rounded-2xl p-8 border border-border animation-fade-in">
+        <h2 className="text-2xl font-bold mb-6 text-center gradient-text">Sign Up</h2>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -47,7 +48,7 @@ function Signup() {
             placeholder="Name"
             value={formData.name}
             onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg"
+            className="w-full px-4 py-2 border rounded-lg bg-background border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             required
           />
           <input
@@ -56,7 +57,7 @@ function Signup() {
             placeholder="Email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg"
+            className="w-full px-4 py-2 border rounded-lg bg-background border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             required
           />
           <div className="relative">
@@ -66,26 +67,27 @@ function Signup() {
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg pr-12"
+              className="w-full px-4 py-2 border rounded-lg bg-background border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary pr-12"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-sm text-blue-600"
+              className="absolute right-3 top-2 text-sm text-primary hover:text-primary-600"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+            className="w-full gradient-primary text-primary-foreground py-2 rounded-lg hover:opacity-90 transition"
           >
             Sign Up
           </button>
         </form>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-        {success && <p className="text-green-500 mt-4">{success}</p>}
+
+        {error && <p className="text-destructive mt-4 text-sm">{error}</p>}
+        {success && <p className="text-success mt-4 text-sm">{success}</p>}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,13 +20,19 @@ import NotFound from "@/pages/not-found";
 // Newly added pages
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
-import LandingPage from "@/pages/LandingPage"; // 👈 import your landing page
+import LandingPage from "@/pages/LandingPage"; // 👈 Landing Page
 
 function Router() {
+  const [location] = useLocation();
+
+  // Routes where we DON'T want Navigation
+  const publicRoutes = ["/", "/login", "/signup", "/auth"];
+  const hideNavigation = publicRoutes.includes(location);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navigation />
-      <div className="md:pl-64">
+      {!hideNavigation && <Navigation />}
+      <div className={!hideNavigation ? "md:pl-64" : ""}>
         <main className="pb-16 md:pb-0">
           <Switch>
             {/* Public routes */}

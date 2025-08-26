@@ -15,8 +15,6 @@ function Login() {
     e.preventDefault();
     setError("");
 
-    console.log("🟢 Submitting login with:", formData); // DEBUG
-
     try {
       const res = await fetch("http://localhost:5000/api/users/login", {
         method: "POST",
@@ -24,30 +22,20 @@ function Login() {
         body: JSON.stringify(formData),
       });
 
-      console.log("📩 Raw response:", res); // DEBUG
-
       const data = await res.json();
-      console.log("📦 Parsed response JSON:", data); // DEBUG
-
       if (!res.ok) throw new Error(data.error || data.message || "Login failed");
 
-      // Save token
       localStorage.setItem("token", data.token);
-
-      console.log("✅ Login successful, token stored:", data.token); // DEBUG
-
-      // Redirect
       setLocation("/dashboard");
     } catch (err: any) {
-      console.error("❌ Login error:", err); // DEBUG
       setError(err.message);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-6">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="w-full max-w-md bg-card text-card-foreground shadow-xl rounded-2xl p-8 border border-border animation-fade-in">
+        <h2 className="text-2xl font-bold mb-6 text-center gradient-text">Login</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
@@ -55,7 +43,7 @@ function Login() {
             placeholder="Email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg"
+            className="w-full px-4 py-2 border rounded-lg bg-background border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             required
           />
           <div className="relative">
@@ -65,25 +53,25 @@ function Login() {
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg pr-12"
+              className="w-full px-4 py-2 border rounded-lg bg-background border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary pr-12"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-sm text-blue-600"
+              className="absolute right-3 top-2 text-sm text-primary hover:text-primary-600"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+            className="w-full gradient-primary text-primary-foreground py-2 rounded-lg hover:opacity-90 transition"
           >
             Login
           </button>
         </form>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
+        {error && <p className="text-destructive mt-4 text-sm">{error}</p>}
       </div>
     </div>
   );
