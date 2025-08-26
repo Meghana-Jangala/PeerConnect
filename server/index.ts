@@ -3,11 +3,20 @@ import dotenv from "dotenv";
 import { registerRoutes } from "./routes";
 import { connectDB } from "./db";
 import http from "http";
+import cors from "cors"; // ✅ Import cors
 
 // ✅ Load environment variables from .env
 dotenv.config();
 
 const app = express();
+
+// ✅ Enable CORS for frontend (Vite default port: 5173)
+app.use(
+  cors({
+    origin: "http://localhost:5173", // frontend
+    credentials: true, // allow cookies/authorization headers if needed
+  })
+);
 
 // ✅ Middleware for parsing JSON & form data
 app.use(express.json());

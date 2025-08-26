@@ -17,6 +17,11 @@ import StudyGroupsPage from "@/pages/study-groups";
 import LeaderboardPage from "@/pages/leaderboard";
 import NotFound from "@/pages/not-found";
 
+// Newly added pages
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
+import LandingPage from "@/pages/LandingPage"; // 👈 import your landing page
+
 function Router() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -24,13 +29,21 @@ function Router() {
       <div className="md:pl-64">
         <main className="pb-16 md:pb-0">
           <Switch>
+            {/* Public routes */}
+            <Route path="/" component={LandingPage} />
+            <Route path="/login" component={Login} />
+            <Route path="/signup" component={Signup} />
             <Route path="/auth" component={AuthPage} />
-            <Route path="/" component={Dashboard} />
+
+            {/* Main app routes */}
+            <Route path="/dashboard" component={Dashboard} />
             <Route path="/matches" component={MatchesPage} />
             <Route path="/chat" component={ChatPage} />
             <Route path="/forum" component={ForumPage} />
             <Route path="/groups" component={StudyGroupsPage} />
             <Route path="/leaderboard" component={LeaderboardPage} />
+
+            {/* Fallback */}
             <Route component={NotFound} />
           </Switch>
         </main>

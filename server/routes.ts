@@ -1,11 +1,11 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import userRoutes from "./routes/userRoutes"; // ✅ import your routes
 
-export async function registerRoutes(app: Express): Promise<Server> {
+// This function just registers routes on the Express app
+export async function registerRoutes(app: Express): Promise<void> {
   // prefix all user-related routes with /api/users
   app.use("/api/users", userRoutes);
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // 👉 Later you can add more route groups here
+  // app.use("/api/posts", postRoutes);
 }
