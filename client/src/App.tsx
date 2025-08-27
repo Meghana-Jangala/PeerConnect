@@ -9,7 +9,7 @@ import { Navigation } from "@/components/Navigation";
 
 // Pages
 import AuthPage from "@/pages/auth";
-import Dashboard from "@/pages/dashboard";
+import Dashboard from "@/pages/Dashboard/dashboard";
 import MatchesPage from "@/pages/matches";
 import ChatPage from "@/pages/chat";
 import ForumPage from "@/pages/forum";

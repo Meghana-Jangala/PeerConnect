@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 
 function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
+  const { login } = useAuth(); // ✅ use login function from context
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -14,21 +17,15 @@ function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Login failed");
-
-      localStorage.setItem("token", data.token);
+      await login(formData.email, formData.password); // ✅ use login()
       setLocation("/dashboard");
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,9 +63,10 @@ function Login() {
           </div>
           <button
             type="submit"
+            disabled={loading}
             className="w-full gradient-primary text-primary-foreground py-2 rounded-lg hover:opacity-90 transition"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
         {error && <p className="text-destructive mt-4 text-sm">{error}</p>}
