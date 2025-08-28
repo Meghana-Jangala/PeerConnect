@@ -50,6 +50,16 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+// ✅ Ensure responses always use `id` instead of `_id`
+UserSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password; // 👈 optional: don’t leak password hashes
+  },
+});
+
 // 🔒 Hash password before saving
 UserSchema.pre("save", async function (next) {
   const user = this as IUser;

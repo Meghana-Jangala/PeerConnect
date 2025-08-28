@@ -1,18 +1,54 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserCard } from "@/components/UserCard";
-import { mockUsers } from "@/data/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { Filter, List, LayoutGrid } from "lucide-react";
 
 export default function MatchesPage() {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<"list" | "cards">("list");
-  
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const token = localStorage.getItem("token");
+
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/users", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch users");
+
+        // ✅ Normalize IDs and exclude current user
+        const currentUserId = user._id || user.id;
+        const otherUsers = data.filter(
+          (u: any) => (u._id || u.id) !== currentUserId
+        );
+
+        setMatches(otherUsers);
+      } catch (err) {
+        console.error("❌ Error fetching matches:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [user]);
+
   if (!user) return null;
 
-  const matches = mockUsers.filter(u => u.id !== user.id);
+  if (loading) {
+    return <div className="p-8 text-center">Loading matches...</div>;
+  }
 
   return (
     <div className="pb-20 md:pb-4 md:pt-20 theme-transition">
@@ -29,14 +65,14 @@ export default function MatchesPage() {
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              <Button 
+              <Button
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("list")}
               >
                 <List className="w-4 h-4" />
               </Button>
-              <Button 
+              <Button
                 variant={viewMode === "cards" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("cards")}
@@ -76,17 +112,29 @@ export default function MatchesPage() {
         </Card>
 
         {/* Matches List */}
-        <div className="space-y-4">
-          {matches.map((match) => (
-            <UserCard
-              key={match.id}
-              user={match}
-              showConnectButton={true}
-              onConnect={() => console.log("Connect with", match.firstName)}
-              onSkip={() => console.log("Skip", match.firstName)}
-            />
-          ))}
-        </div>
+        {matches.length === 0 ? (
+          <div className="text-center text-gray-600 dark:text-gray-400">
+            No matches found.
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "list"
+                ? "space-y-4"
+                : "grid grid-cols-1 sm:grid-cols-2 gap-4"
+            }
+          >
+            {matches.map((match) => (
+              <UserCard
+                key={match._id || match.id}
+                user={match}
+                showConnectButton={(match._id || match.id) !== (user._id || user.id)}
+                onConnect={() => console.log("Connect with", match.firstName)}
+                onSkip={() => console.log("Skip", match.firstName)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Load More */}
         <div className="text-center mt-8">

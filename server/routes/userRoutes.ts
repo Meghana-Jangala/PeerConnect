@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { User } from "../models/User";
 import jwt from "jsonwebtoken";
+import { protect, AuthRequest } from "../middleware/authMiddleware";
 
 const router = Router();
 
@@ -28,9 +29,8 @@ router.post("/signup", async (req, res) => {
 
     // Create new user
     const user = new User({ firstName, lastName, email, password });
-    console.log("🟡 New user (pre-save):", user);
-
     await user.save();
+
     console.log("✅ User saved to DB with id:", user._id.toString());
 
     // Generate JWT
@@ -57,17 +57,12 @@ router.post("/signup", async (req, res) => {
 // ✅ Login
 router.post("/login", async (req, res) => {
   try {
-    console.log("📥 Login request body:", req.body);
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    console.log("🔎 Login user lookup:", user ? user._id.toString() : "NOT FOUND");
-
     if (!user) return res.status(400).json({ error: "Invalid credentials" });
 
     const isMatch = await user.comparePassword(password);
-    console.log("🔐 Password match result:", isMatch);
-
     if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
     const token = generateToken(user._id.toString(), user.email);
@@ -90,12 +85,10 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Get all users
+// ✅ Get all users (no auth)
 router.get("/", async (_req, res) => {
   try {
-    console.log("📡 Fetching all users...");
     const users = await User.find().select("-password");
-    console.log("✅ Users fetched:", users.length);
     res.json(users);
   } catch (err) {
     console.error("❌ Error fetching users:", err);
@@ -103,16 +96,26 @@ router.get("/", async (_req, res) => {
   }
 });
 
-// ✅ Get a specific user by ID
+// ✅ Get logged-in user (secure)
+router.get("/me", protect, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: "Not authorized" });
+
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    console.error("❌ Error fetching current user:", err);
+    res.status(500).json({ error: "Error fetching user" });
+  }
+});
+
+// ✅ Get a specific user by ID (public)
 router.get("/:id", async (req, res) => {
   try {
-    console.log("📡 Fetching user by ID:", req.params.id);
     const user = await User.findById(req.params.id).select("-password");
-    if (!user) {
-      console.log("❌ User not found with ID:", req.params.id);
-      return res.status(404).json({ error: "User not found" });
-    }
-    console.log("✅ User found:", user._id.toString());
+    if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (err) {
     console.error("❌ Error fetching user:", err);
@@ -120,26 +123,21 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ Update user profile (partial updates, with proper skills handling)
-router.put("/:id", async (req, res) => {
+// ✅ Update user profile (secure)
+router.put("/:id", protect, async (req: AuthRequest, res) => {
   try {
-    console.log("📥 Update request for user ID:", req.params.id);
-    console.log("📦 Update data received:", req.body);
+    if (!req.user) return res.status(401).json({ error: "Not authorized" });
+    if (req.user.id !== req.params.id) {
+      return res.status(403).json({ error: "You can only update your own profile" });
+    }
 
     const { firstName, lastName, canTeach, wantToLearn } = req.body;
-
-    // Explicitly construct allowed updates to avoid overwriting
     const updates: any = {};
+
     if (firstName !== undefined) updates.firstName = firstName;
     if (lastName !== undefined) updates.lastName = lastName;
-    if (canTeach !== undefined) {
-      console.log("✏️ Updating canTeach to:", canTeach);
-      updates.canTeach = canTeach;
-    }
-    if (wantToLearn !== undefined) {
-      console.log("✏️ Updating wantToLearn to:", wantToLearn);
-      updates.wantToLearn = wantToLearn;
-    }
+    if (canTeach !== undefined) updates.canTeach = canTeach;
+    if (wantToLearn !== undefined) updates.wantToLearn = wantToLearn;
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
@@ -147,16 +145,9 @@ router.put("/:id", async (req, res) => {
       { new: true }
     ).select("-password");
 
-    if (!user) {
-      console.log("❌ User not found for update:", req.params.id);
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    console.log("✅ User updated successfully:", user);
-    res.json({
-      message: "User updated successfully",
-      user,
-    });
+    res.json({ message: "User updated successfully", user });
   } catch (err) {
     console.error("❌ Error updating user:", err);
     res.status(500).json({ error: "Error updating user" });

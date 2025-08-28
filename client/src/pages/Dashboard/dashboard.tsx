@@ -1,4 +1,3 @@
-// dashboard.tsx
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,84 +11,106 @@ import SkillSection from "./SkillSection";
 import SkillModal from "./SkillModal";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isLoading, updateUserProfile } = useAuth();
   const { theme, setTheme } = useTheme();
 
-  const [teachSkills, setTeachSkills] = useState(user?.canTeach || []);
-  const [learnSkills, setLearnSkills] = useState(user?.wantToLearn || []);
   const [showTeachModal, setShowTeachModal] = useState(false);
   const [showLearnModal, setShowLearnModal] = useState(false);
   const [teachInput, setTeachInput] = useState("");
   const [learnInput, setLearnInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [suggestedMatches, setSuggestedMatches] = useState<any[]>([]);
 
-  // Debugging logs for mount
+  // ✅ Fetch suggested matches from API (exclude current user)
   useEffect(() => {
-    console.log("📊 [Dashboard] Mounted");
-    console.log("👤 [Dashboard] user from AuthContext:", user);
-    console.log("📚 [Dashboard] Initial teachSkills:", teachSkills);
-    console.log("📚 [Dashboard] Initial learnSkills:", learnSkills);
-  }, []);
+    if (!user) return;
 
-  // Sync skills if user changes
-  useEffect(() => {
-    console.log("🔄 [Dashboard] user updated:", user);
-    if (user) {
-      setTeachSkills(user.canTeach || []);
-      setLearnSkills(user.wantToLearn || []);
-      console.log("✅ [Dashboard] Synced teachSkills and learnSkills with updated user");
-    }
+    const token = localStorage.getItem("token");
+
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/users", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch users");
+
+        // ✅ Exclude current user (always compare as string)
+        const otherUsers = data.filter(
+          (u: any) => String(u._id || u.id) !== String(user._id)
+        );
+        setSuggestedMatches(otherUsers.slice(0, 3));
+      } catch (err) {
+        console.error("❌ Error fetching suggested matches:", err);
+
+        // fallback → mockUsers (filter by id or _id)
+        const fallback = mockUsers
+          .filter(
+            (u) =>
+              String(u._id || u.id) !== String(user._id)
+          )
+          .slice(0, 3);
+        setSuggestedMatches(fallback);
+      }
+    };
+
+    fetchUsers();
   }, [user]);
 
-  if (!user) {
-    console.warn("⚠️ [Dashboard] No user found — returning null");
-    return null;
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading your dashboard...</div>;
   }
 
-  const suggestedMatches = mockUsers.filter(u => u.id !== (user as any).id).slice(0, 3);
+  if (!user) {
+    return (
+      <div className="p-8 text-center">
+        You must be logged in to view the dashboard.
+      </div>
+    );
+  }
+
   const stats = {
-    connections: (user as any).connections ?? 0,
-    questionsAnswered: (user as any).questionsAnswered ?? 0,
-    studyGroups: (user as any).studyGroups ?? 0,
-    matches: (user as any).matches ?? 0,
-    rank: (user as any).rank ?? "#--",
+    connections: user.connections ?? 0,
+    questionsAnswered: user.questionsAnswered ?? 0,
+    studyGroups: user.studyGroups ?? 0,
+    matches: user.matches ?? 0,
+    rank: user.rank ?? "#--",
   };
 
-  // ---- Handlers to save skills ----
-  const handleSaveTeachSkill = () => {
-    if (!teachInput.trim()) {
-      console.warn("⚠️ [Dashboard] Tried saving empty teach skill");
-      return;
-    }
+  // ---- Handlers to save skills (persist to backend) ----
+  const handleSaveTeachSkill = async () => {
+    if (!teachInput.trim()) return;
     setSaving(true);
-    console.log("✏️ [Dashboard] Saving teach skill:", teachInput);
-
-    setTimeout(() => {
-      const updated = [...teachSkills, teachInput.trim()];
-      console.log("✅ [Dashboard] Updated teachSkills:", updated);
-      setTeachSkills(updated);
+    try {
+      await updateUserProfile({
+        canTeach: [...(user.canTeach || []), teachInput.trim()],
+      });
       setTeachInput("");
       setShowTeachModal(false);
+    } catch (err) {
+      console.error("Failed to save teach skill:", err);
+    } finally {
       setSaving(false);
-    }, 500);
+    }
   };
 
-  const handleSaveLearnSkill = () => {
-    if (!learnInput.trim()) {
-      console.warn("⚠️ [Dashboard] Tried saving empty learn skill");
-      return;
-    }
+  const handleSaveLearnSkill = async () => {
+    if (!learnInput.trim()) return;
     setSaving(true);
-    console.log("✏️ [Dashboard] Saving learn skill:", learnInput);
-
-    setTimeout(() => {
-      const updated = [...learnSkills, learnInput.trim()];
-      console.log("✅ [Dashboard] Updated learnSkills:", updated);
-      setLearnSkills(updated);
+    try {
+      await updateUserProfile({
+        wantToLearn: [...(user.wantToLearn || []), learnInput.trim()],
+      });
       setLearnInput("");
       setShowLearnModal(false);
+    } catch (err) {
+      console.error("Failed to save learn skill:", err);
+    } finally {
       setSaving(false);
-    }, 500);
+    }
   };
 
   return (
@@ -102,40 +123,54 @@ export default function Dashboard() {
         <Card className="gradient-primary text-white overflow-hidden">
           <CardContent className="p-8">
             <h1 className="text-3xl font-bold mb-2">
-              Welcome back, {(user as any).firstName}! 👋
+              Welcome back, {user.firstName}! 👋
             </h1>
             <p className="text-primary-100 mb-4">
               Ready to learn something new today?
             </p>
             <div className="flex items-center space-x-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.connections}</div>
-                <div className="text-sm text-primary-100">Connections</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.questionsAnswered}</div>
-                <div className="text-sm text-primary-100">Questions Answered</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.studyGroups}</div>
-                <div className="text-sm text-primary-100">Study Groups</div>
-              </div>
+              <StatMini label="Connections" value={stats.connections} />
+              <StatMini
+                label="Questions Answered"
+                value={stats.questionsAnswered}
+              />
+              <StatMini label="Study Groups" value={stats.studyGroups} />
             </div>
           </CardContent>
         </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="Coins" value={(user as any).coins ?? 0} icon={<Coins className="w-8 h-8 text-yellow-500" />} color="text-yellow-500" />
-          <StatCard label="Reputation" value={(user as any).reputation ?? 0} icon={<Star className="w-8 h-8 text-green-500" />} color="text-green-500" />
-          <StatCard label="Matches" value={stats.matches} icon={<Handshake className="w-8 h-8 text-blue-500" />} color="text-blue-500" />
-          <StatCard label="Rank" value={stats.rank} icon={<Trophy className="w-8 h-8 text-purple-500" />} color="text-purple-500" />
+          <StatCard
+            label="Coins"
+            value={user.coins ?? 0}
+            icon={<Coins className="w-8 h-8 text-yellow-500" />}
+            color="text-yellow-500"
+          />
+          <StatCard
+            label="Reputation"
+            value={user.reputation ?? 0}
+            icon={<Star className="w-8 h-8 text-green-500" />}
+            color="text-green-500"
+          />
+          <StatCard
+            label="Matches"
+            value={stats.matches}
+            icon={<Handshake className="w-8 h-8 text-blue-500" />}
+            color="text-blue-500"
+          />
+          <StatCard
+            label="Rank"
+            value={stats.rank}
+            icon={<Trophy className="w-8 h-8 text-purple-500" />}
+            color="text-purple-500"
+          />
         </div>
 
         {/* Skills */}
         <SkillSection
-          teachSkills={teachSkills}
-          learnSkills={learnSkills}
+          teachSkills={user.canTeach}
+          learnSkills={user.wantToLearn}
           setShowTeachModal={setShowTeachModal}
           setShowLearnModal={setShowLearnModal}
         />
@@ -168,50 +203,36 @@ export default function Dashboard() {
                 <Handshake className="w-5 h-5 mr-2 text-primary-500" />
                 Suggested Matches
               </CardTitle>
-              <Button variant="link" size="sm">View All</Button>
+              <Button variant="link" size="sm">
+                View All
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {suggestedMatches.map((match) => (
-                <div key={match.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 card-hover">
-                  <div className="flex items-center space-x-3 mb-3">
-                    {match.profileImage ? (
-                      <img
-                        src={match.profileImage}
-                        alt={match.firstName}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-gray-700 dark:text-gray-200 font-semibold">
-                        {match.firstName?.[0]}
-                        {match.lastName?.[0]}
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
-                        {match.firstName} {match.lastName}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {match.university}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mb-3 text-sm">
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">
+            {suggestedMatches.length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">
+                No suggested matches available.
+              </p>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {suggestedMatches.map((match) => (
+                  <div
+                    key={match._id || match.id}
+                    className="border rounded-lg p-4 card-hover"
+                  >
+                    <h4 className="font-medium">
+                      {match.firstName} {match.lastName}
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Offers: {(match.canTeach || []).slice(0, 2).join(", ")}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Wants: {(match.wantToLearn || []).slice(0, 2).join(", ")}
                     </p>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button size="sm" className="flex-1">Connect</Button>
-                    <Button variant="outline" size="sm">Skip</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -224,23 +245,17 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {mockActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center space-x-3 py-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    activity.type === 'coins_earned' ? 'bg-green-500' :
-                    activity.type === 'new_match' ? 'bg-blue-500' :
-                    'bg-purple-500'
-                  }`} />
-                  <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">
-                    {activity.description}
-                  </p>
-                  <span className="text-xs text-gray-500">
-                    {new Date(activity.timestamp).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {mockActivity.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-center space-x-3 py-2"
+              >
+                <span className="text-sm flex-1">{activity.description}</span>
+                <span className="text-xs text-gray-500">
+                  {new Date(activity.timestamp).toLocaleDateString()}
+                </span>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
@@ -261,5 +276,14 @@ function StatCard({ label, value, icon, color }: any) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function StatMini({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center">
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-sm text-primary-100">{label}</div>
+    </div>
   );
 }
