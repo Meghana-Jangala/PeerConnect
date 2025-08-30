@@ -1,3 +1,4 @@
+// matches.tsx
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Filter, List, LayoutGrid } from "lucide-react";
 
 export default function MatchesPage() {
-  const { user } = useAuth();
+  const { user, updateUserProfile, connectUser } = useAuth(); // ✅ added connectUser from context
   const [viewMode, setViewMode] = useState<"list" | "cards">("list");
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,11 +28,15 @@ export default function MatchesPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch users");
 
-        // ✅ Normalize IDs and exclude current user
-        const currentUserId = user._id || user.id;
-        const otherUsers = data.filter(
-          (u: any) => (u._id || u.id) !== currentUserId
-        );
+        const currentUserId = user._id;
+        const connections = user.connections || [];
+
+        const otherUsers = data
+          .filter((u: any) => (u._id || u.id) !== currentUserId)
+          .map((u: any) => ({
+            ...u,
+            isConnected: connections.includes(u._id || u.id), // ✅ check if already connected
+          }));
 
         setMatches(otherUsers);
       } catch (err) {
@@ -43,6 +48,34 @@ export default function MatchesPage() {
 
     fetchUsers();
   }, [user]);
+
+  const handleConnect = async (matchId: string) => {
+    try {
+      // ✅ use connectUser from AuthContext (sends { targetId: matchId })
+      await connectUser(matchId);
+
+      // ✅ update local matches state
+      setMatches((prev) =>
+        prev.map((m) =>
+          (m._id || m.id) === matchId ? { ...m, isConnected: true } : m
+        )
+      );
+
+      // ✅ also update global user connections (local-only update)
+      updateUserProfile(
+        { connections: [...(user?.connections || []), matchId] },
+        true
+      );
+
+      console.log("✅ Connected to:", matchId);
+    } catch (err) {
+      console.error("❌ Error connecting:", err);
+    }
+  };
+
+  const handleSkip = (matchId: string) => {
+    setMatches((prev) => prev.filter((m) => (m._id || m.id) !== matchId));
+  };
 
   if (!user) return null;
 
@@ -128,9 +161,12 @@ export default function MatchesPage() {
               <UserCard
                 key={match._id || match.id}
                 user={match}
-                showConnectButton={(match._id || match.id) !== (user._id || user.id)}
-                onConnect={() => console.log("Connect with", match.firstName)}
-                onSkip={() => console.log("Skip", match.firstName)}
+                isConnected={match.isConnected}
+                showConnectButton={
+                  (match._id || match.id) !== (user._id || user.id)
+                }
+                onConnect={() => handleConnect(match._id || match.id)}
+                onSkip={() => handleSkip(match._id || match.id)}
               />
             ))}
           </div>

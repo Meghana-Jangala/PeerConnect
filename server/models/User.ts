@@ -8,6 +8,7 @@ export interface IUser extends Document {
   password: string;
   canTeach: string[];
   wantToLearn: string[];
+  connections: mongoose.Types.ObjectId[]; // 👈 added
   createdAt: Date;
   updatedAt: Date;
 
@@ -46,6 +47,13 @@ const UserSchema = new Schema<IUser>(
       type: [String],
       default: [],
     },
+    connections: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
   },
   { timestamps: true }
 );

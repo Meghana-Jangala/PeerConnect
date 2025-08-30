@@ -1,3 +1,4 @@
+// AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { User } from "@shared/schema";
 
@@ -10,7 +11,8 @@ interface AuthContextType {
     firstName: string;
     lastName: string;
   }) => Promise<void>;
-  updateUserProfile: (updates: Partial<User>) => Promise<void>;
+  updateUserProfile: (updates: Partial<User>, localOnly?: boolean) => Promise<void>;
+  connectUser: (targetId: string) => Promise<void>;   // ✅ NEW
   logout: () => void;
   isLoading: boolean;
 }
@@ -27,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       ...rawUser,
       _id: String(rawUser._id || rawUser.id),
+      connections: rawUser.connections || [],
     };
   };
 
@@ -107,9 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (updates: Partial<User>) => {
+  const updateUserProfile = async (updates: Partial<User>, localOnly = false) => {
     const token = localStorage.getItem("token");
     if (!user || !token) return;
+
+    // ✅ Only local state update (no API call)
+    if (localOnly) {
+      setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+      return;
+    }
 
     try {
       const res = await fetch(`http://localhost:5000/api/users/${user._id}`, {
@@ -131,6 +140,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // ✅ Connect with another user
+  const connectUser = async (targetId: string) => {
+    const token = localStorage.getItem("token");
+    if (!user || !token) return;
+
+    try {
+      const res = await fetch("http://localhost:5000/api/users/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetId }),   // ✅ send in body
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Connection failed");
+
+      // Update local state with new connection
+      setUser((prev) =>
+        prev
+          ? { ...prev, connections: [...(prev.connections || []), targetId] }
+          : prev
+      );
+    } catch (err) {
+      console.error("🚨 [AuthContext] Connection failed:", err);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("token");
@@ -138,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, register, updateUserProfile, logout, isLoading }}
+      value={{ user, login, register, updateUserProfile, connectUser, logout, isLoading }}
     >
       {children}
     </AuthContext.Provider>

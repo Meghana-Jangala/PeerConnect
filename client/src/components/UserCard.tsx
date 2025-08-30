@@ -1,28 +1,42 @@
+// UserCard.tsx
 import { User } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Clock, Video } from "lucide-react";
+import { Star, Clock, Video, Check } from "lucide-react";
 
 interface UserCardProps {
   user: User;
   showConnectButton?: boolean;
   onConnect?: () => void;
   onSkip?: () => void;
+  isConnected?: boolean; // 👈 controlled by parent
 }
 
-export function UserCard({ user, showConnectButton = false, onConnect, onSkip }: UserCardProps) {
+export function UserCard({
+  user,
+  showConnectButton = false,
+  onConnect,
+  onSkip,
+  isConnected = false,
+}: UserCardProps) {
   return (
     <Card className="card-hover theme-transition">
       <CardContent className="p-6">
         <div className="flex items-start space-x-4">
+          {/* Profile Image */}
           <div className="flex-shrink-0">
             <img
-              src={user.profileImage || `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150`}
+              src={
+                user.profileImage ||
+                `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150`
+              }
               alt={`${user.firstName} ${user.lastName}`}
               className="w-16 h-16 rounded-full object-cover"
             />
           </div>
+
+          {/* Main Info */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -40,7 +54,8 @@ export function UserCard({ user, showConnectButton = false, onConnect, onSkip }:
                 </span>
               </div>
             </div>
-            
+
+            {/* Skills */}
             <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
                 <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">
@@ -67,7 +82,8 @@ export function UserCard({ user, showConnectButton = false, onConnect, onSkip }:
                 </div>
               </div>
             </div>
-            
+
+            {/* Actions */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                 <span className="flex items-center">
@@ -79,14 +95,27 @@ export function UserCard({ user, showConnectButton = false, onConnect, onSkip }:
                   Video calls available
                 </span>
               </div>
+
               {showConnectButton && (
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={onSkip}>
-                    Skip
-                  </Button>
-                  <Button size="sm" onClick={onConnect}>
-                    Connect
-                  </Button>
+                  {!isConnected ? (
+                    <>
+                      <Button variant="outline" size="sm" onClick={onSkip}>
+                        Skip
+                      </Button>
+                      <Button size="sm" onClick={onConnect}>
+                        Connect
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled
+                      className="bg-green-600 text-white flex items-center"
+                    >
+                      <Check className="w-4 h-4 mr-1" /> Connected
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

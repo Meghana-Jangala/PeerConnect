@@ -13,27 +13,20 @@ const generateToken = (userId: string, email: string) => {
   });
 };
 
-// ✅ Signup (Register)
+// ✅ Signup
 router.post("/signup", async (req, res) => {
   try {
     console.log("📥 Signup request body:", req.body);
     const { firstName, lastName, email, password } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
-    console.log("🔎 Existing user check:", existingUser ? "FOUND" : "NOT FOUND");
-
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Create new user
     const user = new User({ firstName, lastName, email, password });
     await user.save();
 
-    console.log("✅ User saved to DB with id:", user._id.toString());
-
-    // Generate JWT
     const token = generateToken(user._id.toString(), user.email);
 
     res.status(201).json({
@@ -46,6 +39,7 @@ router.post("/signup", async (req, res) => {
         email: user.email,
         canTeach: user.canTeach,
         wantToLearn: user.wantToLearn,
+        connections: user.connections,
       },
     });
   } catch (err) {
@@ -77,6 +71,7 @@ router.post("/login", async (req, res) => {
         email: user.email,
         canTeach: user.canTeach,
         wantToLearn: user.wantToLearn,
+        connections: user.connections,
       },
     });
   } catch (err) {
@@ -85,7 +80,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Get all users (no auth)
+// ✅ Get all users
 router.get("/", async (_req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -96,7 +91,7 @@ router.get("/", async (_req, res) => {
   }
 });
 
-// ✅ Get logged-in user (secure)
+// ✅ Get logged-in user
 router.get("/me", protect, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).json({ error: "Not authorized" });
@@ -111,7 +106,7 @@ router.get("/me", protect, async (req: AuthRequest, res) => {
   }
 });
 
-// ✅ Get a specific user by ID (public)
+// ✅ Get user by ID
 router.get("/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -123,7 +118,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ Update user profile (secure)
+// ✅ Update user
 router.put("/:id", protect, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).json({ error: "Not authorized" });
@@ -151,6 +146,38 @@ router.put("/:id", protect, async (req: AuthRequest, res) => {
   } catch (err) {
     console.error("❌ Error updating user:", err);
     res.status(500).json({ error: "Error updating user" });
+  }
+});
+
+// ✅ Connect two users (body.targetId)
+router.post("/connect", protect, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    const { targetId } = req.body;
+
+    if (!userId) return res.status(401).json({ error: "Not authorized" });
+    if (!targetId) return res.status(400).json({ error: "Target user ID required" });
+    if (userId === targetId) return res.status(400).json({ error: "You cannot connect with yourself" });
+
+    const user = await User.findById(userId);
+    const target = await User.findById(targetId);
+
+    if (!user || !target) return res.status(404).json({ error: "User not found" });
+
+    if (user.connections.includes(target._id)) {
+      return res.json({ message: "Already connected", connected: true });
+    }
+
+    user.connections.push(target._id);
+    target.connections.push(user._id);
+
+    await user.save();
+    await target.save();
+
+    res.json({ message: "Connected successfully", connected: true });
+  } catch (err) {
+    console.error("❌ Error connecting users:", err);
+    res.status(500).json({ error: "Error connecting users" });
   }
 });
 

@@ -73,7 +73,7 @@ export default function Dashboard() {
   }
 
   const stats = {
-    connections: user.connections ?? 0,
+    connections: Array.isArray(user.connections) ? user.connections.length : 0, // ✅ fixed here
     questionsAnswered: user.questionsAnswered ?? 0,
     studyGroups: user.studyGroups ?? 0,
     matches: user.matches ?? 0,
